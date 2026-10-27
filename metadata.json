@@ -1,0 +1,7 @@
+{
+  "uuid": "primary-monitor-launch@zedmanauk.github.io",
+  "name": "Primary Monitor Launch",
+  "description": "Open new application windows on the primary monitor while leaving existing and manually moved windows alone.",
+  "shell-version": ["50"],
+  "version": 1
+}
