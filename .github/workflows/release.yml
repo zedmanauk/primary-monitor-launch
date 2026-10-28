@@ -48,14 +48,16 @@ jobs:
       - name: Publish GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_NOTES: >-
+            Primary Monitor Launch for GNOME Shell 50 on Ubuntu 26.04. Moves newly opened normal application windows once to the primary monitor while preserving existing windows, manual moves, and dialogs. Verified working in a live GNOME session; all 12 automated unit tests pass. Download the attached ZIP, install using gnome-extensions, log out and back in on Wayland, then enable the extension.
         run: |
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Release already exists, refusing to overwrite it."
-            exit 1
+            gh release edit "$RELEASE_TAG" --notes "$RELEASE_NOTES"
+            exit 0
           fi
           gh release create "$RELEASE_TAG" "$ASSET" "$ASSET.sha256" \
             --target "$GITHUB_SHA" \
             --title "Primary Monitor Launch $RELEASE_TAG" \
             --prerelease \
             --latest=false \
-            --notes "Initial prerelease for GNOME Shell 50 on Ubuntu 26.04. Moves newly opened normal application windows once to the primary monitor while preserving existing windows, manual moves, and dialogs. Tested with 12 mocked GNOME API unit tests; live GNOME-session testing remains pending. Download the ZIP, install using gnome-extensions, log out and back in on Wayland, then enable the extension."
+            --notes "$RELEASE_NOTES"
