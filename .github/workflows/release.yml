@@ -1,0 +1,61 @@
+name: Publish GNOME extension release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release version (vMAJOR.MINOR.PATCH)
+        required: true
+        default: v0.1.0
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: primary-monitor-launch-release
+      cancel-in-progress: false
+    env:
+      RELEASE_TAG: ${{ inputs.tag || 'v0.1.0' }}
+      ASSET: primary-monitor-launch@zedmanauk.github.io.zip
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate release
+        run: |
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          node --check extension.js
+          node --test tests/extension.test.mjs
+      - name: Build extension ZIP and checksum
+        run: |
+          zip "$ASSET" extension.js metadata.json README.md LICENSE
+          unzip -t "$ASSET"
+          sha256sum "$ASSET" > "$ASSET.sha256"
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release already exists, refusing to overwrite it."
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" "$ASSET" "$ASSET.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "Primary Monitor Launch $RELEASE_TAG" \
+            --prerelease \
+            --latest=false \
+            --notes "Initial prerelease for GNOME Shell 50 on Ubuntu 26.04. Moves newly opened normal application windows once to the primary monitor while preserving existing windows, manual moves, and dialogs. Tested with 12 mocked GNOME API unit tests; live GNOME-session testing remains pending. Download the ZIP, install using gnome-extensions, log out and back in on Wayland, then enable the extension."
