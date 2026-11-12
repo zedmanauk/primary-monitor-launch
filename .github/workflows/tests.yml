@@ -28,5 +28,24 @@ jobs:
       - name: Validate extension syntax
         run: node --check extension.js
 
+      - name: Validate metadata
+        run: |
+          jq -er '.uuid | length > 0' metadata.json >/dev/null
+          jq -er '.version | select(. == floor and . >= 1)' metadata.json >/dev/null
+          jq -er '.["shell-version"] | length > 0' metadata.json >/dev/null
+
+      - name: Check metadata version bump
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/base"
+          if ! git diff --quiet origin/base HEAD -- extension.js metadata.json; then
+            base=$(git show origin/base:metadata.json | jq -r '.version')
+            head=$(jq -r '.version' metadata.json)
+            if [ "$head" -le "$base" ]; then
+              echo "::error::extension.js/metadata.json changed but metadata version ($head) was not bumped above main's ($base)."
+              exit 1
+            fi
+          fi
+
       - name: Run unit tests
         run: node --test tests/extension.test.mjs

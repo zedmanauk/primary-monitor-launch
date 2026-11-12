@@ -3,10 +3,15 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 
-const source = readFileSync(new URL('../extension.js', import.meta.url), 'utf8')
+const rawSource = readFileSync(new URL('../extension.js', import.meta.url), 'utf8');
+const source = rawSource
     .replace("import Meta from 'gi://Meta';", '')
     .replace("import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';", '')
     .replace('export default class PrimaryMonitorLaunchExtension extends Extension', 'class PrimaryMonitorLaunchExtension extends Extension');
+// Tripwire: if an import or the class declaration is renamed upstream, the
+// replaces above silently no-op and the vm failure is cryptic. Fail loudly.
+for (const leftover of ['gi://Meta', 'resource:///org/gnome/shell', 'export default class'])
+    assert.ok(!source.includes(leftover), `test harness import strip missed: ${leftover}`);
 
 function setup({primary = 0, initial = []} = {}) {
     const signals = new Map();
@@ -97,4 +102,17 @@ test('unmanaged window is removed from tracking', () => {
 test('disable disconnects signal handlers and window listeners', () => {
     const s = setup(); const w = makeWindow(); s.extension.enable(); s.map(w);
     s.extension.disable(); assert.equal(s.signals.size, 0); assert.equal(w.listenerCount(), 0);
+});
+test('disable before enable is a no-op', () => {
+    const s = setup();
+    assert.doesNotThrow(() => s.extension.disable());
+});
+test('re-enable after disable works; double disable is safe', () => {
+    const s = setup();
+    s.extension.enable(); s.extension.disable();
+    assert.doesNotThrow(() => s.extension.disable());
+    s.extension.enable();
+    const w = makeWindow(); s.map(w);
+    assert.deepEqual(w.moves, [0]);
+    s.extension.disable();
 });

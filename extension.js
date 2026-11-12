@@ -56,6 +56,9 @@ export default class PrimaryMonitorLaunchExtension extends Extension {
             global.window_manager.disconnect(this._mapId);
             this._mapId = null;
         }
+        // enable() may never have run, or disable() may run a second time.
+        if (!this._knownWindows)
+            return;
         for (const {window, signalId} of this._knownWindows.values())
             window.disconnect(signalId);
         this._knownWindows.clear();
