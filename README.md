@@ -1,6 +1,10 @@
 # Primary Monitor Launch
 
-A small GNOME Shell 50 extension intended for Ubuntu 26.04 on Wayland.
+[![Unit tests](https://github.com/zedmanauk/primary-monitor-launch/actions/workflows/tests.yml/badge.svg)](https://github.com/zedmanauk/primary-monitor-launch/actions/workflows/tests.yml)
+
+A small GNOME Shell extension for GNOME 49–50, intended for Ubuntu 26.04
+(GNOME 50) on Wayland. Tested live on GNOME 50; GNOME 49 compatibility is
+declared but untested.
 Newly mapped **ordinary application windows** are requested to open on the
 primary monitor selected in **Settings → Displays**. It does not change an
 existing window, move it again, maximize it, or alter workspace selection.
@@ -62,3 +66,15 @@ node --test tests/extension.test.mjs
 
 This tests extension behavior using mocked GNOME window/monitor signals;
 it cannot replace live compositor testing.
+
+CI additionally validates `metadata.json` and fails a pull request that
+changes `extension.js` without bumping the integer `version` there — the
+same monotonic-version rule extensions.gnome.org enforces on upload.
+
+## Releasing
+
+Push a signed-off version tag (`git tag v0.2.0 && git push origin v0.2.0`);
+the release workflow publishes a ZIP to a GitHub release on `v*` tags (or run
+it manually via *Run workflow*). `v0.x` tags publish as prereleases; `v1.0.0`
+and later publish as the latest release. Re-running a tag refreshes the
+assets in place instead of silently keeping a stale ZIP.
